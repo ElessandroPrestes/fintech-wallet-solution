@@ -1,15 +1,27 @@
+import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
+import { getSession } from '@/lib/session';
+import { walletService } from '@/services/wallet.service';
+import { BalanceCard } from '@/components/wallet/balance-card';
+import { TransactionTable } from '@/components/wallet/transaction-table';
+import { WalletActions } from '@/components/wallet/wallet-actions';
 
 export const metadata: Metadata = {
   title: 'Dashboard | Fintech Wallet',
 };
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const session = getSession();
+  if (!session) redirect('/login');
+
+  const wallet = await walletService.getWallet(session).catch(() => null);
+
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-2 text-gray-500">Módulo de carteira em construção.</p>
+    <main className="mx-auto max-w-3xl px-4 py-8">
+      <div className="flex flex-col gap-6">
+        <BalanceCard balance={wallet?.balance ?? 0} />
+        <WalletActions />
+        <TransactionTable entries={wallet?.ledgerEntries ?? []} />
       </div>
     </main>
   );
