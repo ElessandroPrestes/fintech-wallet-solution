@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
-import { loginSchema, type LoginSchema } from '@/schemas/auth.schema';
-import { loginAction } from '@/actions/auth.actions';
+import { registerSchema, type RegisterSchema } from '@/schemas/auth.schema';
+import { registerAction } from '@/actions/auth.actions';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
-export function LoginForm() {
+export function RegisterForm() {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -18,24 +18,34 @@ export function LoginForm() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginSchema>({
-    resolver: zodResolver(loginSchema),
+  } = useForm<RegisterSchema>({
+    resolver: zodResolver(registerSchema),
   });
 
-  const onSubmit = async (data: LoginSchema) => {
+  const onSubmit = async (data: RegisterSchema) => {
     setServerError(null);
-    const result = await loginAction(data);
+    const result = await registerAction(data);
 
     if (!result || !result.success) {
       setServerError(result?.error ?? 'Erro inesperado. Tente novamente.');
       return;
     }
 
-    router.push('/dashboard');
+    router.push('/login?registered=true');
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+      <Input
+        id="name"
+        type="text"
+        label="Nome completo"
+        placeholder="João Silva"
+        autoComplete="name"
+        error={errors.name?.message}
+        {...register('name')}
+      />
+
       <Input
         id="email"
         type="email"
@@ -51,9 +61,19 @@ export function LoginForm() {
         type="password"
         label="Senha"
         placeholder="••••••••"
-        autoComplete="current-password"
+        autoComplete="new-password"
         error={errors.password?.message}
         {...register('password')}
+      />
+
+      <Input
+        id="confirmPassword"
+        type="password"
+        label="Confirmar senha"
+        placeholder="••••••••"
+        autoComplete="new-password"
+        error={errors.confirmPassword?.message}
+        {...register('confirmPassword')}
       />
 
       {serverError && (
@@ -61,13 +81,13 @@ export function LoginForm() {
       )}
 
       <Button type="submit" loading={isSubmitting} className="mt-2">
-        Entrar
+        Criar conta
       </Button>
 
       <p className="text-center text-sm text-gray-500">
-        Não tem conta?{' '}
-        <Link href="/register" className="font-medium text-brand-600 hover:underline">
-          Cadastre-se
+        Já tem conta?{' '}
+        <Link href="/login" className="font-medium text-brand-600 hover:underline">
+          Entrar
         </Link>
       </p>
     </form>
