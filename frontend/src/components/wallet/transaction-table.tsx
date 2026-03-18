@@ -103,7 +103,7 @@ export function TransactionTable({ entries }: TransactionTableProps) {
                   <p className="text-sm font-medium text-gray-800">
                     {KIND_LABEL[entry.kind]}
                   </p>
-                  <p className="text-xs text-gray-400">{formatDate(entry.createdAt)}</p>
+                  <p suppressHydrationWarning className="text-xs text-gray-400">{formatDate(entry.createdAt)}</p>
                   {entry.description && (
                     <p className="text-xs text-gray-500">{entry.description}</p>
                   )}
