@@ -6,3 +6,4 @@ out/
 .env.*.local
 coverage/
 *.tsbuildinfo
+next-env.d.ts
