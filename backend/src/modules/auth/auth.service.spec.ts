@@ -108,7 +108,7 @@ describe('AuthService', () => {
 
       const result = service.login(user);
 
-      expect((result.user as Record<string, unknown>).passwordHash).toBeUndefined();
+      expect((result.user as unknown as Record<string, unknown>).passwordHash).toBeUndefined();
     });
   });
 });
