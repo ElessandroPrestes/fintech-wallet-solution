@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { transferSchema, type TransferSchema } from '@/schemas/wallet.schema';
@@ -13,6 +14,7 @@ interface TransferModalProps {
 }
 
 export function TransferModal({ onClose }: TransferModalProps) {
+  const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
 
   const {
@@ -26,11 +28,16 @@ export function TransferModal({ onClose }: TransferModalProps) {
   const onSubmit = async (data: TransferSchema) => {
     setServerError(null);
     const result = await transferAction(data);
-    if (result.success) {
-      onClose();
-    } else {
-      setServerError(result.error);
+    if (!result || !result.success) {
+      const error = result?.error ?? 'Erro inesperado. Tente novamente.';
+      if (error.includes('Sessão expirada')) {
+        router.push('/login');
+        return;
+      }
+      setServerError(error);
+      return;
     }
+    onClose();
   };
 
   return (

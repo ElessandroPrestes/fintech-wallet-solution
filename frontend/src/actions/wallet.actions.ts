@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getSession } from '@/lib/session';
+import { getSession, clearSession } from '@/lib/session';
 import { walletService } from '@/services/wallet.service';
 import { depositSchema, transferSchema } from '@/schemas/wallet.schema';
 import { ApiError } from '@/lib/http-client';
@@ -14,7 +14,10 @@ function requireSession(): string | null {
 
 function handleApiError(err: unknown): ActionResult {
   if (err instanceof ApiError) {
-    // Erros de negócio vindos do backend são repassados diretamente
+    if (err.status === 401) {
+      clearSession();
+      return { success: false, error: 'Sessão expirada. Faça login novamente.' };
+    }
     return { success: false, error: err.message };
   }
   return { success: false, error: 'Serviço indisponível. Tente novamente.' };

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { depositSchema, type DepositSchema } from '@/schemas/wallet.schema';
@@ -13,6 +14,7 @@ interface DepositModalProps {
 }
 
 export function DepositModal({ onClose }: DepositModalProps) {
+  const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
 
   const {
@@ -26,11 +28,16 @@ export function DepositModal({ onClose }: DepositModalProps) {
   const onSubmit = async (data: DepositSchema) => {
     setServerError(null);
     const result = await depositAction(data);
-    if (result.success) {
-      onClose();
-    } else {
-      setServerError(result.error);
+    if (!result || !result.success) {
+      const error = result?.error ?? 'Erro inesperado. Tente novamente.';
+      if (error.includes('Sessão expirada')) {
+        router.push('/login');
+        return;
+      }
+      setServerError(error);
+      return;
     }
+    onClose();
   };
 
   return (
