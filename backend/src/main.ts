@@ -9,14 +9,17 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const config = app.get(ConfigService);
-  const port = config.get<number>('PORT', 3001);
+  const port = config.get<number>('PORT', 3000);
+
+  // Prefixo global — todas as rotas ficam sob /api/*
+  app.setGlobalPrefix('api');
 
   // Segurança — headers HTTP
   app.use(helmet());
 
   // CORS
   app.enableCors({
-    origin: config.get<string>('FRONTEND_URL', 'http://localhost:3000'),
+    origin: config.get<string>('FRONTEND_URL', 'http://localhost:3001'),
     credentials: true,
   });
 
@@ -30,7 +33,7 @@ async function bootstrap() {
     }),
   );
 
-  // Swagger / OpenAPI
+  // Swagger / OpenAPI — rota explícita fora do globalPrefix
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Fintech Wallet API')
     .setDescription('API de carteira financeira com suporte a transferências, depósitos e estornos')
@@ -39,11 +42,12 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api/docs', app, document);
 
-  await app.listen(port);
-  console.log(`Servidor rodando em http://localhost:${port}`);
-  console.log(`Documentação disponível em http://localhost:${port}/api`);
+  // '0.0.0.0' garante que o container aceita conexões externas (Docker)
+  await app.listen(port, '0.0.0.0');
+  console.log(`Servidor rodando em http://localhost:${port}/api`);
+  console.log(`Documentação disponível em http://localhost:${port}/api/docs`);
 }
 
 bootstrap();

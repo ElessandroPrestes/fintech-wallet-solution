@@ -26,14 +26,15 @@ services:
       target: development
     image: fintech_wallet_backend:dev   # <-- nome da imagem definido
     container_name: fintech_wallet_backend
+    command: npm run start:dev
     restart: unless-stopped
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://${POSTGRES_USER:-wallet_user}:${POSTGRES_PASSWORD:-wallet_pass}@postgres:5432/${POSTGRES_DB:-wallet_db}
       JWT_SECRET: ${JWT_SECRET:-change_this_secret_in_production}
-      PORT: 3001
+      PORT: 3000
     ports:
-      - '3001:3001'
+      - '3000:3000'
     volumes:
       - ./backend:/app
       - /app/node_modules
@@ -50,13 +51,14 @@ services:
       target: development
     image: fintech_wallet_frontend:dev   # <-- nome da imagem definido
     container_name: fintech_wallet_frontend
+    command: npm run dev
     restart: unless-stopped
     environment:
       NODE_ENV: development
-      API_URL: http://backend:3001
-      NEXT_PUBLIC_API_URL: http://localhost:3001
+      API_URL: http://fintech_wallet_backend:3000
+      NEXT_PUBLIC_API_URL: http://localhost:3000
     ports:
-      - '3000:3000'
+      - '3001:3000'
     volumes:
       - ./frontend:/app
       - /app/node_modules

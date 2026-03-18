@@ -37,9 +37,9 @@ docker compose up --build
 
 | Serviço    | URL                       |
 |------------|---------------------------|
-| Frontend   | http://localhost:3000     |
-| API REST   | http://localhost:3001     |
-| Swagger    | http://localhost:3001/api |
+| API REST   | http://localhost:3000/api     |
+| Swagger    | http://localhost:3000/api/docs |
+| Frontend   | http://localhost:3001     |
 | PostgreSQL | localhost:5432            |
 
 ```bash
@@ -104,7 +104,7 @@ frontend/src/
         └── dashboard/     # Server Component: busca wallet e extrato autenticados
 ```
 
-**Roteamento Docker:** As Server Actions usam `API_URL=http://backend:3001` (rede interna Docker). O browser usa `NEXT_PUBLIC_API_URL=http://localhost:3001`.
+**Roteamento Docker:** As Server Actions usam `API_URL=http://fintech_wallet_backend:3000` (rede interna Docker via nome do container). O browser usa `NEXT_PUBLIC_API_URL=http://localhost:3000`.
 
 ---
 
@@ -213,7 +213,7 @@ Copie `.env.example` para `.env`:
 | `POSTGRES_DB`         | Nome do banco                    | `wallet_db`                   |
 | `JWT_SECRET`          | Segredo do access token JWT      | **Obrigatório trocar em prod**|
 | `JWT_REFRESH_SECRET`  | Segredo do refresh token         | **Obrigatório trocar em prod**|
-| `NEXT_PUBLIC_API_URL` | URL da API (browser)             | `http://localhost:3001`       |
+| `NEXT_PUBLIC_API_URL` | URL da API (browser)             | `http://localhost:3000`       |
 
 ---
 
