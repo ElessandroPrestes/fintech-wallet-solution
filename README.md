@@ -1,157 +1,248 @@
 # fintech-wallet-solution
 
-Plataforma de carteira digital para transferência de saldos, depósitos e estornos, construída com arquitetura de Ledger imutável sobre NestJS + Next.js.
+Plataforma de carteira digital para transferências, depósitos e estornos, construída sobre um modelo de **Ledger imutável** com stack moderna e pronta para produção.
 
-Desenvolvido por **Elessandro Prestes Macedo**.
+**Autor:** Elessandro Prestes Macedo
+**Repositório:** [github.com/ElessandroPrestes/fintech-wallet-solution](https://github.com/ElessandroPrestes/fintech-wallet-solution)
 
 ---
 
 ## Sumário
 
+- [Início Rápido](#início-rápido)
 - [Arquitetura](#arquitetura)
+- [Destaques Técnicos](#destaques-técnicos)
 - [Stack](#stack)
-- [Como Rodar com Docker](#como-rodar-com-docker)
 - [Variáveis de Ambiente](#variáveis-de-ambiente)
+- [Testes](#testes)
 - [CI/CD](#cicd)
-- [Decisões de Design](#decisões-de-design)
 
 ---
 
-## Arquitetura
-
-O projeto é um **monorepo** estruturado em três camadas independentes:
-
-```
-/
-├── backend/        # API REST — NestJS + TypeScript
-├── frontend/       # SPA/SSR — Next.js App Router + TypeScript
-└── .github/        # GitHub Actions (CI Pipeline)
-```
-
-### Backend — Clean Architecture
-
-```
-backend/src/
-├── config/             # Configurações centralizadas (app.config.ts)
-├── database/           # DatabaseModule com TypeORM
-└── modules/
-    ├── auth/           # Autenticação JWT (login, refresh token)
-    ├── users/
-    │   ├── dto/        # CreateUserDto, UserResponseDto
-    │   ├── entities/   # User entity
-    │   ├── repositories/
-    │   └── use-cases/  # CreateUserUseCase + testes
-    └── wallet/
-        └── entities/   # Wallet + LedgerEntry (padrão ledger imutável)
-```
-
-Cada módulo segue a divisão: `Controller → Use Case → Repository → Entity`.
-
----
-
-## Stack
-
-| Camada      | Tecnologia                          |
-|-------------|--------------------------------------|
-| Backend     | NestJS 10, TypeScript, TypeORM       |
-| Frontend    | Next.js 14 (App Router), TypeScript  |
-| Banco       | PostgreSQL 16                        |
-| Auth        | JWT (access + refresh token)         |
-| Docs        | Swagger / OpenAPI 3                  |
-| Container   | Docker + Docker Compose              |
-| CI          | GitHub Actions                       |
-| Qualidade   | ESLint, Jest, Supertest              |
-
----
-
-## Como Rodar com Docker
+## Início Rápido
 
 ### Pré-requisitos
 
 - Docker >= 24
 - Docker Compose >= 2.20
 
-### Passos
+### Subir o ambiente completo
 
 ```bash
-# 1. Clone o repositório
 git clone git@github.com:ElessandroPrestes/fintech-wallet-solution.git
 cd fintech-wallet-solution
-
-# 2. Configure as variáveis de ambiente
-cp .env.example .env
-# Edite o .env com suas credenciais
-
-# 3. Suba todos os serviços
-docker compose up -d
-
-# 4. Verifique os logs
-docker compose logs -f backend
+cp .env.example .env   # ajuste as variáveis conforme necessário
+docker compose up --build
 ```
 
-Os serviços estarão disponíveis em:
-
-| Serviço    | URL                          |
-|------------|------------------------------|
-| Frontend   | http://localhost:3000        |
-| API REST   | http://localhost:3001        |
-| Swagger    | http://localhost:3001/api    |
-| PostgreSQL | localhost:5432               |
-
-### Parar os serviços
+| Serviço    | URL                       |
+|------------|---------------------------|
+| Frontend   | http://localhost:3000     |
+| API REST   | http://localhost:3001     |
+| Swagger    | http://localhost:3001/api |
+| PostgreSQL | localhost:5432            |
 
 ```bash
-docker compose down
-# Para remover os volumes (banco de dados):
+# Parar e remover volumes
 docker compose down -v
 ```
 
 ---
 
+## Arquitetura
+
+O projeto é um **monorepo** com três camadas independentes:
+
+```
+/
+├── backend/         # API REST — NestJS + TypeScript
+├── frontend/        # SSR/Server Actions — Next.js 14 App Router + TypeScript
+└── .github/         # Pipeline de CI (GitHub Actions)
+```
+
+### Backend — Clean Architecture
+
+Cada módulo segue uma única direção de dependência:
+
+```
+Controller → Use Case → Repository → Entity
+```
+
+```
+backend/src/
+├── config/            # Configuração centralizada (app.config.ts)
+├── database/          # TypeORM async com SSL condicional
+├── common/
+│   ├── decorators/    # @CurrentUser()
+│   ├── exceptions/    # InsufficientFundsException
+│   └── guards/        # JwtAuthGuard
+└── modules/
+    ├── auth/          # LocalStrategy, JwtStrategy, AuthService, AuthController
+    ├── users/         # CreateUserUseCase, UsersRepository, UsersController
+    └── wallet/        # DepositUseCase, TransferUseCase, ReverseTransactionUseCase
+                       # WalletRepository, WalletController
+                       # Entities: Wallet, LedgerEntry
+```
+
+### Frontend — Next.js App Router com Server Actions
+
+```
+frontend/src/
+├── actions/      # Server Actions: loginAction, depositAction, transferAction, reverseAction
+├── services/     # authService, walletService (chamadas ao backend via httpClient)
+├── lib/          # httpClient (Fetch API), session (httpOnly cookie), cn (Tailwind utils)
+├── schemas/      # Validação Zod: loginSchema, registerSchema, depositSchema, transferSchema
+├── components/
+│   ├── ui/       # Input, Button (reutilizáveis)
+│   ├── forms/    # LoginForm (react-hook-form + zod)
+│   ├── layout/   # Header
+│   └── wallet/   # BalanceCard, TransactionTable, TransferModal, DepositModal, WalletActions
+└── app/
+    ├── (auth)/login/      # Página de login
+    └── (private)/
+        ├── layout.tsx     # Layout com Header + proteção de rota
+        └── dashboard/     # Server Component: busca wallet e extrato autenticados
+```
+
+**Roteamento Docker:** As Server Actions usam `API_URL=http://backend:3001` (rede interna Docker). O browser usa `NEXT_PUBLIC_API_URL=http://localhost:3001`.
+
+---
+
+## Destaques Técnicos
+
+### Ledger Imutável
+
+Nenhum saldo é sobrescrito diretamente. Cada operação financeira gera uma entrada imutável na tabela `ledger_entries`:
+
+| Campo            | Descrição                                              |
+|------------------|--------------------------------------------------------|
+| `type`           | `CREDIT` ou `DEBIT`                                    |
+| `kind`           | `DEPOSIT`, `TRANSFER_IN`, `TRANSFER_OUT`, `REVERSAL`   |
+| `originalEntryId`| Liga o estorno à entrada original (rastreabilidade)    |
+
+O saldo pode ser auditado como `SUM(CREDIT) - SUM(DEBIT)` a qualquer momento, independente do campo `balance`.
+
+### Atomicidade com QueryRunner
+
+Toda operação financeira (depósito, transferência, estorno) usa **transações explícitas do TypeORM** via `QueryRunner`:
+
+```typescript
+const qr = this.walletRepository.createQueryRunner();
+await qr.connect();
+await qr.startTransaction();
+try {
+  // atualiza wallet + insere ledger entry na mesma transação
+  await qr.commitTransaction();
+} catch (err) {
+  await qr.rollbackTransaction();
+  throw err;
+} finally {
+  await qr.release();
+}
+```
+
+Isso garante que nunca haverá um débito sem a respectiva entrada no ledger.
+
+### Proteção contra Estorno Duplo
+
+Antes de criar uma entrada de `REVERSAL`, o sistema verifica:
+
+```typescript
+const alreadyReversed = await this.walletRepository.hasReversal(entryId, qr);
+if (alreadyReversed) throw new ConflictException('Esta transação já foi estornada');
+```
+
+### Regra de Saldo Negativo
+
+Depósitos sempre são permitidos. Se o saldo estiver negativo, o depósito abate a dívida automaticamente:
+
+```
+saldo atual: -R$ 80,00  +  depósito: R$ 100,00  =  novo saldo: R$ 20,00
+```
+
+Transferências, por outro lado, exigem `saldo >= valor` e lançam `InsufficientFundsException` (HTTP 400) caso contrário.
+
+### Sessão via Cookie httpOnly
+
+O token JWT é armazenado em um cookie `httpOnly` + `secure` (em produção) + `sameSite: lax`, eliminando exposição via `localStorage` e ataques XSS:
+
+```typescript
+cookies().set('wallet.session', token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  maxAge: 60 * 15, // alinhado com JWT_EXPIRES_IN
+});
+```
+
+### Segurança OWASP
+
+| Camada       | Controle                                                      |
+|--------------|---------------------------------------------------------------|
+| Headers      | `helmet()` — X-Frame-Options, HSTS, CSP e outros             |
+| Rate Limiting | `@nestjs/throttler` — 10 req/s global, 3 req/min em registro |
+| Validação    | `class-validator` + `class-transformer` com `whitelist: true` |
+| Senhas       | `bcryptjs` com 12 rounds de salt                             |
+| Tokens       | JWT de curta duração (15 min) via cookie httpOnly             |
+
+---
+
+## Stack
+
+| Camada      | Tecnologia                                      |
+|-------------|-------------------------------------------------|
+| Backend     | NestJS 10, TypeScript, TypeORM, Passport        |
+| Frontend    | Next.js 14 (App Router), react-hook-form, Zod   |
+| Banco       | PostgreSQL 16                                   |
+| Auth        | JWT (Passport Local + JWT Strategy)             |
+| Docs        | Swagger / OpenAPI 3                             |
+| Infra       | Docker, Docker Compose                          |
+| CI          | GitHub Actions (lint → test → build)            |
+| Qualidade   | ESLint, Prettier, Jest (33 testes unitários)    |
+
+---
+
 ## Variáveis de Ambiente
 
-Copie `.env.example` para `.env` e preencha:
+Copie `.env.example` para `.env`:
 
-| Variável              | Descrição                       | Padrão                         |
-|-----------------------|---------------------------------|--------------------------------|
-| `POSTGRES_USER`       | Usuário do banco                | `wallet_user`                  |
-| `POSTGRES_PASSWORD`   | Senha do banco                  | `wallet_pass`                  |
-| `POSTGRES_DB`         | Nome do banco                   | `wallet_db`                    |
-| `JWT_SECRET`          | Segredo para assinar os JWTs    | **Obrigatório mudar em prod**  |
-| `JWT_REFRESH_SECRET`  | Segredo para refresh tokens     | **Obrigatório mudar em prod**  |
-| `NEXT_PUBLIC_API_URL` | URL da API para o frontend      | `http://localhost:3001`        |
+| Variável              | Descrição                        | Padrão                        |
+|-----------------------|----------------------------------|-------------------------------|
+| `POSTGRES_USER`       | Usuário do banco                 | `wallet_user`                 |
+| `POSTGRES_PASSWORD`   | Senha do banco                   | `wallet_pass`                 |
+| `POSTGRES_DB`         | Nome do banco                    | `wallet_db`                   |
+| `JWT_SECRET`          | Segredo do access token JWT      | **Obrigatório trocar em prod**|
+| `JWT_REFRESH_SECRET`  | Segredo do refresh token         | **Obrigatório trocar em prod**|
+| `NEXT_PUBLIC_API_URL` | URL da API (browser)             | `http://localhost:3001`       |
+
+---
+
+## Testes
+
+```bash
+cd backend
+npm install
+npm test              # 33 testes unitários
+npm run test:cov      # com relatório de cobertura
+```
+
+**Cobertura por módulo:**
+
+| Módulo                     | Testes | Cenários cobertos                                                        |
+|----------------------------|--------|--------------------------------------------------------------------------|
+| `CreateUserUseCase`        | 6      | criação, normalização de e-mail, conflito, hash de senha                 |
+| `AuthService`              | 8      | credenciais válidas/inválidas, timing attack, payload JWT, sem passwordHash |
+| `DepositUseCase`           | 5      | depósito normal, abatimento de dívida, dívida parcial, rollback          |
+| `TransferUseCase`          | 7      | transferência, débito/crédito, saldo insuficiente, auto-transferência, rollback |
+| `ReverseTransactionUseCase`| 6      | estorno de CREDIT/DEBIT, ajuste de saldo, not found, duplo estorno, rollback |
 
 ---
 
 ## CI/CD
 
-O pipeline no GitHub Actions (`.github/workflows/ci.yml`) executa em todo push/PR para `main` ou `develop`:
+O pipeline `.github/workflows/ci.yml` executa em todo push/PR para `main` ou `develop`:
 
-1. **Lint** — ESLint em backend e frontend (paralelamente)
-2. **Tests** — Testes unitários e e2e do backend com PostgreSQL de suporte
-3. **Build** — Compilação de backend e frontend
-
----
-
-## Decisões de Design
-
-### Padrão Ledger (Event Sourcing leve)
-
-Cada operação financeira (depósito, transferência, estorno) é registrada como uma **entrada imutável no ledger**. O saldo nunca é sobrescrito — ele é sempre calculado como a soma das entradas (`CREDIT`) menos as saídas (`DEBIT`). Isso garante:
-
-- Auditoria completa e histórico imutável
-- Suporte nativo a estornos (uma entrada `REVERSAL` cancela a original)
-- Consistência eventual e rastreabilidade
-
-### Reversão / Estorno
-
-Um estorno cria uma nova entrada no ledger do tipo oposto ao original, zerando o efeito da transação. Ambas as entradas ficam vinculadas por `originalEntryId`, permitindo auditoria completa.
-
-### Segurança (OWASP)
-
-- **Helmet** — headers HTTP de segurança
-- **Rate Limiting** — throttle por IP via `@nestjs/throttler` (global + por rota sensível)
-- **Validação** — `class-validator` + `class-transformer` em todos os DTOs (whitelist ativada)
-- **JWT** — tokens de curta duração (15m) com refresh token rotacionado (7d)
-- **Bcrypt** — hash de senhas com 12 rounds de salt
-- **Variáveis sensíveis** — nunca no código; sempre via `.env`
+```
+Lint (backend) ──→ Tests (backend + PostgreSQL) ──→ Build (backend)
+Lint (frontend) ──────────────────────────────────→ Build (frontend)
+```

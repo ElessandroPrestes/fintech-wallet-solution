@@ -1,4 +1,7 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+// API_URL é usada em Server Actions/Components (rede interna Docker: http://backend:3001)
+// NEXT_PUBLIC_API_URL é o fallback para desenvolvimento local e chamadas do browser
+const API_URL =
+  process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 export class ApiError extends Error {
   constructor(

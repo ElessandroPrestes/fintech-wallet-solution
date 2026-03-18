@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -26,6 +24,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       target: development
+    image: fintech_wallet_backend:dev   # <-- nome da imagem definido
     container_name: fintech_wallet_backend
     restart: unless-stopped
     environment:
@@ -49,10 +48,12 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: development
+    image: fintech_wallet_frontend:dev   # <-- nome da imagem definido
     container_name: fintech_wallet_frontend
     restart: unless-stopped
     environment:
       NODE_ENV: development
+      API_URL: http://backend:3001
       NEXT_PUBLIC_API_URL: http://localhost:3001
     ports:
       - '3000:3000'
