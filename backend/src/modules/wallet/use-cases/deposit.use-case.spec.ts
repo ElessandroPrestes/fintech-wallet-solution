@@ -5,16 +5,7 @@ import { Wallet } from '../entities/wallet.entity';
 import { LedgerEntry, EntryKind, EntryType } from '../entities/ledger-entry.entity';
 
 const makeWallet = (balance: number): Wallet =>
-  ({ id: 'wallet-1', balance, ledgerEntries: [] } as unknown as Wallet);
-
-const makeEntry = (overrides: Partial<LedgerEntry> = {}): LedgerEntry =>
-  ({
-    id: 'entry-1',
-    type: EntryType.CREDIT,
-    kind: EntryKind.DEPOSIT,
-    amount: 100,
-    ...overrides,
-  } as LedgerEntry);
+  ({ id: 'wallet-1', balance, ledgerEntries: [] }) as unknown as Wallet;
 
 const makeQueryRunner = (walletOverride?: Wallet) => {
   const wallet = walletOverride ?? makeWallet(0);

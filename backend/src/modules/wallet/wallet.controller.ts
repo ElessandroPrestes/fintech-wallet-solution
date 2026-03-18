@@ -14,7 +14,6 @@ import {
   ApiOperation,
   ApiBearerAuth,
   ApiOkResponse,
-  ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiConflictResponse,
   ApiBadRequestResponse,

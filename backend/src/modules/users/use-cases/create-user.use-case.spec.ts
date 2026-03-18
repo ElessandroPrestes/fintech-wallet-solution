@@ -45,7 +45,7 @@ describe('CreateUserUseCase', () => {
       expect(result.id).toBe('uuid-1');
       expect(result.email).toBe('joao@email.com');
       expect(result.name).toBe('João Silva');
-      expect((result as any).passwordHash).toBeUndefined();
+      expect((result as unknown as Record<string, unknown>).passwordHash).toBeUndefined();
     });
 
     it('deve normalizar o e-mail para lowercase e remover espaços', async () => {
@@ -61,9 +61,7 @@ describe('CreateUserUseCase', () => {
 
       await useCase.execute(makeDto({ email: '  JOAO@EMAIL.COM  ' }));
 
-      expect(repo.save).toHaveBeenCalledWith(
-        expect.objectContaining({ email: 'joao@email.com' }),
-      );
+      expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({ email: 'joao@email.com' }));
     });
 
     it('deve lançar ConflictException quando o e-mail já estiver cadastrado', async () => {
