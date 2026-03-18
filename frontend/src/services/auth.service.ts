@@ -12,14 +12,14 @@ export interface AuthResponse {
 
 export const authService = {
   login(email: string, password: string): Promise<AuthResponse> {
-    return httpClient<AuthResponse>('/auth/login', {
+    return httpClient<AuthResponse>('/api/auth/login', {
       method: 'POST',
       body: { email, password },
     });
   },
 
   register(name: string, email: string, password: string): Promise<{ id: string; email: string }> {
-    return httpClient('/users', {
+    return httpClient('/api/users', {
       method: 'POST',
       body: { name, email, password },
     });

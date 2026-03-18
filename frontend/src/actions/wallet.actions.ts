@@ -1,17 +1,15 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
 import { walletService } from '@/services/wallet.service';
 import { depositSchema, transferSchema } from '@/schemas/wallet.schema';
 import { ApiError } from '@/lib/http-client';
 import type { ActionResult } from '@/actions/auth.actions';
 
-function requireSession(): string {
-  const session = getSession();
-  if (!session) redirect('/login');
-  return session;
+// Retorna null em vez de redirect() — wallet actions são chamadas de Client Components
+function requireSession(): string | null {
+  return getSession() ?? null;
 }
 
 function handleApiError(err: unknown): ActionResult {
@@ -24,6 +22,7 @@ function handleApiError(err: unknown): ActionResult {
 
 export async function depositAction(formData: unknown): Promise<ActionResult> {
   const session = requireSession();
+  if (!session) return { success: false, error: 'Sessão expirada. Faça login novamente.' };
 
   const parsed = depositSchema.safeParse(formData);
   if (!parsed.success) {
@@ -42,6 +41,7 @@ export async function depositAction(formData: unknown): Promise<ActionResult> {
 
 export async function transferAction(formData: unknown): Promise<ActionResult> {
   const session = requireSession();
+  if (!session) return { success: false, error: 'Sessão expirada. Faça login novamente.' };
 
   const parsed = transferSchema.safeParse(formData);
   if (!parsed.success) {
@@ -70,6 +70,7 @@ export async function transferAction(formData: unknown): Promise<ActionResult> {
 
 export async function reverseAction(entryId: string): Promise<ActionResult> {
   const session = requireSession();
+  if (!session) return { success: false, error: 'Sessão expirada. Faça login novamente.' };
 
   try {
     await walletService.reverse(session, entryId);
