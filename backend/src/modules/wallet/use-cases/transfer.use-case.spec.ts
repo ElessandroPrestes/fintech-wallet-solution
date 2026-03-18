@@ -7,7 +7,7 @@ import { LedgerEntry, EntryKind, EntryType } from '../entities/ledger-entry.enti
 import { InsufficientFundsException } from '../../../common/exceptions/insufficient-funds.exception';
 
 const makeWallet = (id: string, balance: number): Wallet =>
-  ({ id, balance, ledgerEntries: [] } as unknown as Wallet);
+  ({ id, balance, ledgerEntries: [] }) as unknown as Wallet;
 
 const makeQueryRunner = (senderBalance: number, recipientBalance = 0) => {
   const sender = makeWallet('wallet-sender', senderBalance);

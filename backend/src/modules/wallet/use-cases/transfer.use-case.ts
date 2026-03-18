@@ -29,10 +29,7 @@ export class TransferUseCase {
         throw new InsufficientFundsException();
       }
 
-      const recipientWallet = await this.walletRepository.findOrCreateForUser(
-        dto.recipientId,
-        qr,
-      );
+      const recipientWallet = await this.walletRepository.findOrCreateForUser(dto.recipientId, qr);
 
       senderWallet.balance = senderBalance - dto.amount;
       recipientWallet.balance = Number(recipientWallet.balance) + dto.amount;

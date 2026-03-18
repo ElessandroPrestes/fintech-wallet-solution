@@ -4,8 +4,7 @@ import { WalletRepository } from '../repositories/wallet.repository';
 import { Wallet } from '../entities/wallet.entity';
 import { LedgerEntry, EntryKind, EntryType } from '../entities/ledger-entry.entity';
 
-const makeWallet = (balance: number): Wallet =>
-  ({ id: 'wallet-1', balance } as unknown as Wallet);
+const makeWallet = (balance: number): Wallet => ({ id: 'wallet-1', balance }) as unknown as Wallet;
 
 const makeEntry = (
   type: EntryType,
@@ -22,7 +21,7 @@ const makeEntry = (
     wallet,
     originalEntryId: null,
     ...overrides,
-  } as unknown as LedgerEntry);
+  }) as unknown as LedgerEntry;
 
 const makeQueryRunner = () => ({
   connect: jest.fn().mockResolvedValue(undefined),
