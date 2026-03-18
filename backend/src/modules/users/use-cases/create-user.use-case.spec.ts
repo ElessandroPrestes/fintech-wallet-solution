@@ -4,12 +4,13 @@ import { UsersRepository } from '../repositories/users.repository';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { User } from '../entities/user.entity';
 
-const mockUsersRepository = (): jest.Mocked<UsersRepository> => ({
-  findById: jest.fn(),
-  findByEmail: jest.fn(),
-  save: jest.fn(),
-  exists: jest.fn(),
-});
+const mockUsersRepository = () =>
+  ({
+    findById: jest.fn(),
+    findByEmail: jest.fn(),
+    save: jest.fn(),
+    exists: jest.fn(),
+  }) as unknown as jest.Mocked<UsersRepository>;
 
 const makeDto = (overrides: Partial<CreateUserDto> = {}): CreateUserDto => ({
   email: 'joao@email.com',
