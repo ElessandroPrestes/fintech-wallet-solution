@@ -44,6 +44,10 @@ export class WalletRepository {
     return qr.manager.save(Wallet, wallet);
   }
 
+  findByWalletId(walletId: string, qr: QueryRunner): Promise<Wallet | null> {
+    return qr.manager.findOne(Wallet, { where: { id: walletId } });
+  }
+
   findLedgerEntryById(id: string, qr: QueryRunner): Promise<LedgerEntry | null> {
     return qr.manager.findOne(LedgerEntry, {
       where: { id },

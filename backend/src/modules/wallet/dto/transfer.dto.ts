@@ -2,7 +2,10 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsNumber, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 
 export class TransferDto {
-  @ApiProperty({ example: 'uuid-do-usuario-destinatario' })
+  @ApiProperty({
+    example: 'uuid-da-carteira-destinataria',
+    description: 'ID (UUID) da carteira do destinatário — obtido via GET /api/wallet',
+  })
   @IsUUID('4', { message: 'ID do destinatário inválido' })
   recipientId: string;
 
