@@ -18,6 +18,11 @@ export class WalletRepository {
     return this.dataSource.createQueryRunner();
   }
 
+  async createForUser(userId: string): Promise<Wallet> {
+    const wallet = this.walletRepo.create({ user: { id: userId }, balance: 0 });
+    return this.walletRepo.save(wallet);
+  }
+
   findByUserId(userId: string): Promise<Wallet | null> {
     return this.walletRepo.findOne({
       where: { user: { id: userId } },

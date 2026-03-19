@@ -1,6 +1,7 @@
 import { ConflictException } from '@nestjs/common';
 import { CreateUserUseCase } from './create-user.use-case';
 import { UsersRepository } from '../repositories/users.repository';
+import { WalletRepository } from '../../wallet/repositories/wallet.repository';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { User } from '../entities/user.entity';
 
@@ -12,6 +13,11 @@ const mockUsersRepository = () =>
     exists: jest.fn(),
   }) as unknown as jest.Mocked<UsersRepository>;
 
+const mockWalletRepository = () =>
+  ({
+    createForUser: jest.fn().mockResolvedValue({}),
+  }) as unknown as jest.Mocked<WalletRepository>;
+
 const makeDto = (overrides: Partial<CreateUserDto> = {}): CreateUserDto => ({
   email: 'joao@email.com',
   name: 'João Silva',
@@ -22,10 +28,12 @@ const makeDto = (overrides: Partial<CreateUserDto> = {}): CreateUserDto => ({
 describe('CreateUserUseCase', () => {
   let useCase: CreateUserUseCase;
   let repo: jest.Mocked<UsersRepository>;
+  let walletRepo: jest.Mocked<WalletRepository>;
 
   beforeEach(() => {
     repo = mockUsersRepository();
-    useCase = new CreateUserUseCase(repo);
+    walletRepo = mockWalletRepository();
+    useCase = new CreateUserUseCase(repo, walletRepo);
   });
 
   describe('execute()', () => {
@@ -110,6 +118,30 @@ describe('CreateUserUseCase', () => {
       await useCase.execute(makeDto());
 
       expect(repo.exists).toHaveBeenCalledWith('joao@email.com');
+    });
+
+    it('deve criar a carteira automaticamente para o novo usuário', async () => {
+      repo.exists.mockResolvedValue(false);
+      repo.save.mockResolvedValue({
+        id: 'uuid-5',
+        email: 'joao@email.com',
+        name: 'João Silva',
+        passwordHash: 'hashed',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as User);
+
+      await useCase.execute(makeDto());
+
+      expect(walletRepo.createForUser).toHaveBeenCalledWith('uuid-5');
+    });
+
+    it('não deve criar a carteira quando o e-mail já estiver cadastrado', async () => {
+      repo.exists.mockResolvedValue(true);
+
+      await useCase.execute(makeDto()).catch(() => null);
+
+      expect(walletRepo.createForUser).not.toHaveBeenCalled();
     });
   });
 });
