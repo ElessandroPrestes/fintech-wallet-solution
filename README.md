@@ -198,7 +198,7 @@ cookies().set('wallet.session', token, {
 | Docs        | Swagger / OpenAPI 3                             |
 | Infra       | Docker, Docker Compose                          |
 | CI          | GitHub Actions (lint → test → build)            |
-| Qualidade   | ESLint, Prettier, Jest (33 testes unitários)    |
+| Qualidade   | ESLint, Prettier, Jest (36 testes unitários)    |
 
 ---
 
@@ -222,7 +222,7 @@ Copie `.env.example` para `.env`:
 ```bash
 cd backend
 npm install
-npm test              # 33 testes unitários
+npm test              # 36 testes unitários
 npm run test:cov      # com relatório de cobertura
 ```
 
@@ -233,7 +233,7 @@ npm run test:cov      # com relatório de cobertura
 | `CreateUserUseCase`        | 6      | criação, normalização de e-mail, conflito, hash de senha                 |
 | `AuthService`              | 8      | credenciais válidas/inválidas, timing attack, payload JWT, sem passwordHash |
 | `DepositUseCase`           | 5      | depósito normal, abatimento de dívida, dívida parcial, rollback          |
-| `TransferUseCase`          | 7      | transferência, débito/crédito, saldo insuficiente, auto-transferência, rollback |
+| `TransferUseCase`          | 8      | transferência, débito/crédito, saldo insuficiente, auto-transferência, destinatário não encontrado, rollback |
 | `ReverseTransactionUseCase`| 6      | estorno de CREDIT/DEBIT, ajuste de saldo, not found, duplo estorno, rollback |
 
 ---
@@ -246,3 +246,155 @@ O pipeline `.github/workflows/ci.yml` executa em todo push/PR para `main` ou `de
 Lint (backend) ──→ Tests (backend + PostgreSQL) ──→ Build (backend)
 Lint (frontend) ──────────────────────────────────→ Build (frontend)
 ```
+
+---
+
+## 🧪 Roteiro de Testes Manuais (End-to-End)
+
+### Pré-requisito
+
+Docker rodando com `docker compose up -d`
+
+- **Frontend:** http://localhost:3001
+- **Backend / Swagger:** http://localhost:3000/api/docs
+
+---
+
+### Cenário 1 — Onboarding (Registro e Login)
+
+**1.1 Criar conta do usuário principal**
+- Acesse http://localhost:3001/register
+- Preencha **Nome completo:** `Alice Teste`
+- Preencha **E-mail:** `alice@fintech.com`
+- Preencha **Senha:** `Senha@123` (mín. 8 chars, letras e números)
+- Preencha **Confirmar senha:** `Senha@123`
+- Clique em **Criar conta**
+- **Resultado esperado:** redirecionamento para `/login?registered=true`
+
+**1.2 Validações de formulário (testes negativos)**
+- Tente registrar com e-mail inválido (ex: `naoéemail`) → erro inline no campo
+- Tente registrar com senhas diferentes → erro "As senhas não conferem"
+- Tente registrar com o mesmo e-mail `alice@fintech.com` novamente → erro do servidor "E-mail já cadastrado"
+
+**1.3 Login e redirecionamento**
+- Acesse http://localhost:3001/login
+- Insira `alice@fintech.com` / `Senha@123`
+- Clique em **Entrar**
+- **Resultado esperado:** redirecionamento automático para `/dashboard`
+- Verifique que o saldo exibido é **R$ 0,00**
+- Verifique que a tabela de transações está **vazia** (sem entradas)
+
+**1.4 Proteção de rota**
+- Sem estar logado, acesse http://localhost:3001/dashboard diretamente
+- **Resultado esperado:** redirecionamento para `/login?from=%2Fdashboard`
+- Após login, verifique que retorna para o dashboard
+
+---
+
+### Cenário 2 — Preparação de Ambiente (Conta "Cobaia")
+
+*Vamos criar um segundo usuário para ser destinatário das transferências.*
+
+**2.1 Criar conta do cobaia via Interface**
+- Abra uma **aba anônima** (para não derrubar a sessão da Alice)
+- Acesse http://localhost:3001/register
+- Preencha **Nome completo:** `Bob Cobaia`
+- Preencha **E-mail:** `bob@fintech.com`
+- Preencha **Senha:** `Senha@123`
+- Clique em **Criar conta** → redirecionado para `/login`
+
+**2.2 Obter o UUID do Bob via Swagger**
+- Acesse http://localhost:3000/api/docs
+- Localize o endpoint `POST /api/auth/login`
+- Clique em *Try it out* e envie: `{ "email": "bob@fintech.com", "password": "Senha@123" }`
+- Copie o campo `accessToken` da resposta
+- Clique em *Authorize* (cadeado no topo do Swagger), cole o token no campo Bearer e confirme
+- Localize o endpoint `GET /api/wallet`
+- Clique em *Try it out* → *Execute*
+- **Resultado esperado:** resposta com `{ "id": "uuid-da-wallet-do-bob", "balance": 0 }`
+
+> ⚠️ **Atenção:** o campo `recipientId` na transferência é o `id` da **wallet** (não o `id` do usuário). Salve esse UUID para o Cenário 3.
+
+---
+
+### Cenário 3 — Fluxo Financeiro (Depósito e Transferência)
+
+*Volte para a aba principal (logada como Alice).*
+
+**3.1 Depósito**
+- No Dashboard, clique em **Depositar**
+- Preencha **Valor:** `500`
+- Preencha **Descrição:** `Salário de teste`
+- Clique em **Depositar**
+- **Resultado esperado:** modal fecha, saldo atualiza para **R$ 500,00**. A tabela exibe 1 entrada: `Depósito / CREDIT / R$ 500,00`.
+
+**3.2 Depósito com valor inválido (teste negativo)**
+- Abra o modal de depósito novamente
+- Preencha **Valor:** `0` ou valor negativo
+- Clique em **Depositar**
+- **Resultado esperado:** erro de validação no campo (sem fechar o modal)
+
+**3.3 Transferência**
+- No Dashboard, clique em **Transferir**
+- Preencha **ID do destinatário:** cole o UUID da wallet do Bob (obtido no Cenário 2)
+- Preencha **Valor:** `150`
+- Preencha **Descrição:** `Pagamento de teste`
+- Clique em **Transferir**
+- **Resultado esperado:** modal fecha, saldo da Alice atualiza para **R$ 350,00**
+
+**3.4 Verificar saldo do Bob após transferência**
+- No Swagger (aba do Bob, autenticado), execute novamente `GET /api/wallet`
+- **Resultado esperado:** `"balance": 150`
+
+**3.5 Transferência com saldo insuficiente (teste negativo)**
+- Tente transferir `R$ 9999`
+- **Resultado esperado:** erro no modal "Saldo insuficiente para realizar a transferência"
+
+**3.6 Transferência para ID inexistente (teste negativo)**
+- Tente transferir com `recipientId`: `00000000-0000-0000-0000-000000000000`
+- **Resultado esperado:** erro no modal "Conta destinatária não encontrada"
+
+---
+
+### Cenário 4 — Auditoria (Extrato / Ledger)
+
+**4.1 Estrutura do extrato**
+- A tabela exibe **2 entradas** (depósito + transferência)
+- **Entrada 1:** Depósito (`DEPOSIT`) / Tipo: CREDIT (`+ R$ 500,00`) / Descrição: `Salário de teste`
+- **Entrada 2:** Transferência enviada (`TRANSFER_OUT`) / Tipo: DEBIT (`- R$ 150,00`) / Descrição: `Pagamento de teste`
+
+**4.2 Estorno de transação**
+- Localize a entrada do depósito (`R$ 500,00`) e clique em **Estornar**
+- **Resultado esperado:** saldo atualiza para **R$ -150,00**. Uma nova entrada do tipo `REVERSAL` é criada.
+- Tente estornar a mesma transação novamente
+- **Resultado esperado:** erro "Esta transação já foi estornada"
+
+**4.3 Verificar extrato do Bob (via Swagger)**
+- No Swagger do Bob, execute `GET /api/wallet`
+- **Resultado esperado:** ledger contém 1 entrada: `TRANSFER_IN / CREDIT / R$ 150,00`
+
+---
+
+### Cenário 5 — Segurança e Sessão
+
+**5.1 Logout**
+- No Dashboard, clique em **Sair**
+- **Resultado esperado:** redirecionamento para `/login`
+- Tente acessar `/dashboard` diretamente → redirecionado para login
+
+**5.2 Usuário já logado**
+- Faça login novamente como Alice
+- Tente acessar `/login` ou `/register`
+- **Resultado esperado:** redirecionamento automático para `/dashboard`
+
+---
+
+### Resumo de Resultados
+
+| Cenário | Status |
+| :--- | :--- |
+| 1 — Registro e Login | ✅ Passou |
+| 2 — Criação do cobaia e obtenção do UUID | ✅ Passou |
+| 3 — Depósito e Transferência | ✅ Passou |
+| 4 — Auditoria / Ledger / Estorno | ✅ Passou |
+| 5 — Segurança e Sessão | ✅ Passou |
